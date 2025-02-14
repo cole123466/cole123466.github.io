@@ -1,0 +1,469 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://cole123466.github.io</id>
+    <title>Lan&apos;s Blog</title>
+    <updated>2025-02-14T06:18:45.312Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://cole123466.github.io"/>
+    <link rel="self" href="https://cole123466.github.io/atom.xml"/>
+    <subtitle>Lan&apos;s Blog</subtitle>
+    <logo>https://cole123466.github.io/images/avatar.png</logo>
+    <icon>https://cole123466.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2025, Lan&apos;s Blog</rights>
+    <entry>
+        <title type="html"><![CDATA[跟单提示脚本]]></title>
+        <id>https://cole123466.github.io/post/gen-dan-ti-shi-jiao-ben/</id>
+        <link href="https://cole123466.github.io/post/gen-dan-ti-shi-jiao-ben/">
+        </link>
+        <updated>2025-02-07T05:38:19.000Z</updated>
+        <content type="html"><![CDATA[<p>豆包提问<br>
+#python #编程</p>
+<p>https://www.doubao.com/thread/wc24fc05a57442cca<br>
+用crontab每5秒运行脚本<br>
+记得给权限chmod +x /root/bot/gendan.py<br>
+bug:保证金计算那里每次数据不一致，就会导致数据即使没有发生变化，也会运行发生变化的代码<br>
+主要是ip的问题，新加坡能请求一些币安的接口，但是有的接口要香港</p>
+<p>开仓提醒：</p>
+<pre><code class="language-python">import requests
+import json
+import os
+import time
+
+webhook_url = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=f02937f9-f887-4a24-9609-1f0ca686d40c'
+url = &quot;https://www.binance.info/bapi/futures/v1/friendly/future/copy-trade/lead-data/positions?portfolioId=3976272489709966337&quot;
+MAX_RETRIES = 3  # 最大重试次数
+RETRY_DELAY = 5  # 重试间隔时间（秒）
+
+def make_request(url):
+
+    带有重试机制的网络请求函数
+    
+    retries = 0
+    while retries &lt; MAX_RETRIES:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f'网络请求出错，第 {retries + 1} 次重试: {e}')
+            retries += 1
+            time.sleep(RETRY_DELAY)
+    print('达到最大重试次数，请求失败。')
+    return None
+
+def main():
+    try:
+        # 发送请求获取数据
+        data = make_request(url)
+        if data is None:
+            return
+
+        # 筛选出 adl 不为 0 的持仓信息
+        filtered = [pos for pos in data['data'] if pos.get('adl', 0) != 0]
+
+        def generate_json():
+
+            result = [
+                {
+
+                    'symbol': item['symbol'],
+                    'entryPrice': str(float(item['entryPrice'])),  # 确保为浮点数并转换为字符串
+                    'positionSide': '多' if item['positionSide'].upper() == 'LONG' else '空',
+                    'leverage': float(item['leverage']),  # 确保为浮点数
+                }
+                for item in filtered if item['adl'] != 0
+            ]
+            with open('output.json', 'w', encoding='utf-8') as f:
+                json.dump(result, f, ensure_ascii=False, indent=4)
+            return result
+
+        def compare_json(prev_data, new_data):
+            if prev_data == new_data:
+                print(&quot;JSON 文件内容未发生变化。&quot;)
+            else:
+                print(&quot;JSON 文件内容发生了变化。&quot;)
+                # 找出新增的数据
+                new_items = [item for item in new_data if item not in prev_data]
+                for item in new_items:
+                    output_str = f&quot;haywar开单了！\n交易对：{item['symbol']}\n入场价位：{item['entryPrice']}\n方向：{item['positionSide']}\n杠杆：{item['leverage']}\n&quot;
+                    print(&quot;-&quot; * 30)
+                    print(output_str)
+                    print(&quot;-&quot; * 30)
+                    msg = {
+                        &quot;msgtype&quot;: &quot;text&quot;,
+                        &quot;text&quot;: {
+                            &quot;content&quot;: output_str
+                        }
+                    }
+                    # 将数据序列化为 JSON 格式
+                    headers = {'Content-Type': 'application/json'}
+                    try:
+                        response = requests.post(webhook_url, data=json.dumps(msg), headers=headers)
+                        response.raise_for_status()  # 检查请求是否成功
+                        print('Webhook 发送成功:', response.text)
+                    except requests.RequestException as e:
+                        print('Webhook 发送失败:', e)
+
+        # 读取之前的 JSON 文件
+        if os.path.exists('output.json'):
+            with open('output.json', 'r', encoding='utf-8') as f:
+                prev_result = json.load(f)
+        else:
+            prev_result = []
+
+        new_result = generate_json()
+        compare_json(prev_result, new_result)
+
+    except (KeyError, json.JSONDecodeError) as e:
+        print('数据解析出错:', e)
+    except FileNotFoundError:
+        print('文件未找到，请检查路径。')
+    except Exception as e:
+        print('发生未知错误:', e)
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<p>平仓提醒：</p>
+<pre><code class="language-python">import requests
+import json
+from datetime import datetime
+webhook_url = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=f02937f9-f887-4a24-9609-1f0ca686d40c'
+
+
+def fetch_and_save_positions():
+    url = &quot;https://www.binance.com/bapi/futures/v1/friendly/future/copy-trade/lead-portfolio/position-history&quot;
+    payload = {
+        &quot;portfolioId&quot;: &quot;3976272489709966337&quot;,
+        &quot;pageNumber&quot;: 1,
+        &quot;pageSize&quot;: 10,
+        &quot;sort&quot;: &quot;CLOSING&quot;,
+    }
+
+    # 定义请求头
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+    try:
+        try:
+            with open('positions_history.json', 'r', encoding='utf-8') as f:
+                old_data = json.load(f)
+        except FileNotFoundError:
+            old_data = []
+
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()  # 检查 HTTP 状态码
+
+        # 打印响应内容
+        # print(&quot;响应内容:&quot;, response.text)
+
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            print(&quot;无法将响应内容解析为 JSON 格式。响应内容:&quot;, response.text)
+            return
+
+        positions_list = data.get('data', {}).get('list', [])
+        new_filtered_data = []
+        for item in positions_list:
+            update_time = item.get(&quot;updateTime&quot;)
+            if update_time:
+                update_time = datetime.fromtimestamp(update_time / 1000).strftime(&quot;%Y-%m-%d %H:%M:%S&quot;)
+            else:
+                update_time = &quot;N/A&quot;
+
+            new_filtered_data.append({
+                &quot;symbol&quot;: item.get(&quot;symbol&quot;),
+                &quot;side&quot;: item.get(&quot;side&quot;),
+                &quot;avgClosePrice&quot;: item.get(&quot;avgClosePrice&quot;),
+                &quot;closingPnl&quot;: item.get(&quot;closingPnl&quot;),
+                &quot;updateTime&quot;: update_time
+            })
+
+        new_positions = []
+        for position in new_filtered_data:
+            if position not in old_data:
+                new_positions.append(position)
+
+        output_str = &quot;&quot;
+        if new_positions:
+            for position in new_positions:
+                position_str = (
+                    f&quot;haywar平仓！\n&quot;
+                    f&quot;交易对：{position['symbol']}\n&quot;
+                    f&quot;方向：{position['side']}\n&quot;
+                    f&quot;平仓价位：{position['avgClosePrice']}\n&quot;
+                    f&quot;平仓盈亏：{position['closingPnl']}\n&quot;
+                    f&quot;平仓时间：{position['updateTime']}\n\n&quot;
+                )
+                output_str += position_str
+                msg = {
+                    &quot;msgtype&quot;: &quot;text&quot;,
+                    &quot;text&quot;: {
+                        &quot;content&quot;: output_str
+                    }
+                }
+                # 将数据序列化为 JSON 格式
+                headers = {'Content-Type': 'application/json'}
+                try:
+                    response = requests.post(webhook_url, data=json.dumps(msg), headers=headers)
+                    response.raise_for_status()  # 检查请求是否成功
+                    print('Webhook 发送成功:', response.text)
+                except requests.RequestException as e:
+                    print('Webhook 发送失败:', e)
+
+        with open('positions_history.json', 'w', encoding='utf-8') as f:
+            json.dump(new_filtered_data, f, ensure_ascii=False, indent=4)
+        print(&quot;数据已成功保存到 positions_history.json&quot;)
+
+    except requests.exceptions.RequestException as e:
+        print(f&quot;请求失败: {str(e)}&quot;)
+    except Exception as e:
+        print(f&quot;操作失败: {str(e)}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    fetch_and_save_positions()
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[a4到a7，个人心得经验简述（b站）]]></title>
+        <id>https://cole123466.github.io/post/a4-dao-a7ge-ren-xin-de-jing-yan-jian-shu-b-zhan/</id>
+        <link href="https://cole123466.github.io/post/a4-dao-a7ge-ren-xin-de-jing-yan-jian-shu-b-zhan/">
+        </link>
+        <updated>2024-07-09T17:05:10.000Z</updated>
+        <content type="html"><![CDATA[<p>第一阶段 经验和本金的积累（靠出卖劳力和脑力来获得收入）</p>
+<p>第二阶段 广义上的创业（靠积累的本金和经验获得一定的被动收入）</p>
+<p>第三阶段 配置优质资产</p>
+<p>*大多数人一辈子可能就只走到第一阶段，极少能在短短一生到达第三阶段。发家是要靠几代人的家庭的积累跟传承。</p>
+<h2 id="第一阶段">第一阶段</h2>
+<p><strong>思维误区</strong></p>
+<p>*读书可以改变命运，但不要学历崇拜，时代已经变了，学历贬值得厉害。老人所谓的出路就是上一代人吃到的红利或者自己没吃到红利但别人吃到的红利。</p>
+<p>*不要陷入政治性抑郁。喜欢在网上键政，越了解结构性的恶，个人的灾难，知道的真相越多，对现状了解的越深，感觉自己什么都改变不了，思虑过重，永远处于消极状态。其实没必要，专注于自己的提升，远离宏大的叙事，多珍惜下身边人（也不要忽略大环境，对大环境还是要有一定的思考，因为有可能就是出口，这一点推上facai姐的做得很好）</p>
+<p>*完成对世界的祛魅，最重要的是完成对自己自信的建立。推荐书籍（毫无意义的工作）。这个世界就是一个巨大的草台班子，一个巨大的庞氏骗局（草台班子也是今年比较热门的词）。这里up主讲了一些关于自信，可以听听。</p>
+<p><strong>up经历</strong></p>
+<p>性格：自信</p>
+<p>对投机有天然兴趣，投机性质基本玩过。（天赋）</p>
+<p>大一：基金热潮，2w投入纳斯达克etf，半年收益30%，第一次尝到投资的甜头。疫情，全部换仓中欧医疗，盈利归零，割肉在最低点。</p>
+<p>cs饰品市场套利 （搬不同交易市场的饰品，倒差价）</p>
+<p>2021 10 饰品可以出租之后，捏久点的武器或者皮肤升值直接当赛博包租公</p>
+<p>要省钱 消费主义会让人失去投资和储蓄的习惯，身上没有流动的现金，面对机会的时候拿不出钱。</p>
+<p>长期理念，将吃饭省的，当包租公的，利滚利。</p>
+<p><strong>心得有三</strong></p>
+<p>1.长期主义（市场是有起起伏伏的，做能看懂的行情）</p>
+<p>2.赚钱第一，大部分的烦恼就是因为没钱。</p>
+<p>3攒钱，不碰奢侈品，不投资不了解的东西。</p>
+<h2 id="第二阶段-广义的创业">第二阶段 广义的创业</h2>
+<p>第二次发家非常顺畅，今年加密货币市场启动前夕大量囤积btc solana bnb bgb，平均收益4，5倍</p>
+<p>散户三种 赌 稳 神</p>
+<p>赌：时间，风险，技术（up的理解是不投入时间和技术，用高风险换取高收益）。</p>
+<p>稳：用超长时间弥补技术水平的缺失，把风险控制在最低的水平。</p>
+<p>神：投入时间，交易周期可长可短，风险管理异于常人。</p>
+<p><strong>评论区精摘</strong></p>
+<p>楼主：<img src="C:%5CUsers%5CTarantino%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20240710010253926.png" alt="image-20240710010253926" loading="lazy"></p>
+<p>回答：</p>
+<figure data-type="image" tabindex="1"><img src="C:%5CUsers%5CTarantino%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20240710010308192.png" alt="image-20240710010308192" loading="lazy"></figure>
+<figure data-type="image" tabindex="2"><img src="C:%5CUsers%5CTarantino%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20240710010456141.png" alt="image-20240710010456141" loading="lazy"></figure>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Ubuntu eclipse]]></title>
+        <id>https://cole123466.github.io/post/ubuntu-eclipse/</id>
+        <link href="https://cole123466.github.io/post/ubuntu-eclipse/">
+        </link>
+        <updated>2023-10-26T15:42:40.000Z</updated>
+        <content type="html"><![CDATA[<p>如果eclipse运行文件中出现 xx目录不存在或者找不到路径，那么需要修改文件的权限<br>
+&quot;hdfs://localhost:9000/user/hadoop/&quot;,<br>
+&quot;hdfs://localhost:9000/user/hadoop/merge.txt&quot;);<br>
+hdfs dfs -chmod 777 /user/hadoop</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[土神youtube PA trading ]]></title>
+        <id>https://cole123466.github.io/post/tu-shen-youtube-pa-trading/</id>
+        <link href="https://cole123466.github.io/post/tu-shen-youtube-pa-trading/">
+        </link>
+        <updated>2023-02-24T15:00:21.000Z</updated>
+        <content type="html"><![CDATA[<h3 id="基本概念">基本概念</h3>
+<h4 id="market-structure-break市场结构破坏">market structure break（市场结构破坏）</h4>
+<h5 id="上涨趋势出现的msb">上涨趋势出现的msb</h5>
+<h6 id="一般解释一段上涨的行情中一个高点创造了一个较高的低点然后出现了一个更高的高点打破了前面的高的高点就被称为市场结构的破坏">一般解释：一段上涨的行情中，一个高点创造了一个较高的低点，然后出现了一个更高的高点打破了前面的高的高点就被称为市场结构的破坏。</h6>
+<figure data-type="image" tabindex="1"><img src="https://cole123466.github.io/post-images/1677251288039.png" alt="" loading="lazy"></figure>
+<h5 id="强msb">强msb</h5>
+<figure data-type="image" tabindex="2"><img src="https://cole123466.github.io/post-images/1677251292752.png" alt="" loading="lazy"></figure>
+<h5 id="弱msbcould-be-fake">弱msb（could be fake）</h5>
+<h6 id="第一种">第一种</h6>
+<figure data-type="image" tabindex="3"><img src="https://cole123466.github.io/post-images/1677251297100.png" alt="" loading="lazy"></figure>
+<h6 id="第二种懒的画了哈哈哈哈">第二种（懒的画了哈哈哈哈</h6>
+<figure data-type="image" tabindex="4"><img src="https://cole123466.github.io/post-images/1677251306579.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="5"><img src="https://cole123466.github.io/post-images/1677251314675.png" alt="" loading="lazy"></figure>
+<h4 id="msb的入场">msb的入场</h4>
+<figure data-type="image" tabindex="6"><img src="https://cole123466.github.io/post-images/1677251387336.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="7"><img src="https://cole123466.github.io/post-images/1677251379347.png" alt="" loading="lazy"></figure>
+<h4 id="一些图表分析">一些图表分析</h4>
+<h6 id="头肩底">头肩底</h6>
+<figure data-type="image" tabindex="8"><img src="https://cole123466.github.io/post-images/1677251368876.png" alt="" loading="lazy"></figure>
+<h6 id="下降楔形">下降楔形</h6>
+<figure data-type="image" tabindex="9"><img src="https://cole123466.github.io/post-images/1677251362053.png" alt="" loading="lazy"></figure>
+<h4 id="msb的入场2主要是依靠2根k线确认强弱信号所以是有风险的">msb的入场2（主要是依靠2根k线确认强弱信号，所以是有风险的）</h4>
+<figure data-type="image" tabindex="10"><img src="https://cole123466.github.io/post-images/1677251355578.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="11"><img src="https://cole123466.github.io/post-images/1677251347024.png" alt="" loading="lazy"></figure>
+<h4 id="msb入场3大周期寻找区域小周期找进场点">msb入场3（大周期寻找区域，小周期找进场点）</h4>
+<figure data-type="image" tabindex="12"><img src="https://cole123466.github.io/post-images/1677251337769.png" alt="" loading="lazy"></figure>
+<h5 id="实际例子">实际例子</h5>
+<figure data-type="image" tabindex="13"><img src="https://cole123466.github.io/post-images/1677251323588.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="14"><img src="https://cole123466.github.io/post-images/1677251330868.png" alt="" loading="lazy"></figure>
+<h2 id="订单块order-blcok">订单块（order blcok）</h2>
+<p>注：土神的进场比较倾向于价格填补不平衡，即不平衡和ob两者。永远不要在没有大周期的供需区域的情况下去用MSB和OB进行交易。</p>
+<p>原理：做市商订单在特定供需区的累积</p>
+<p>订单块出现在当出现强msb的时候，找到上涨启动前的更低点LL（lower low），这意味着当价格回到这个LL的区间会出现反应。<br>
+<img src="https://cole123466.github.io/post-images/1684230899123.png" alt="" loading="lazy"><br>
+简单入场方式：</p>
+<p>再次回到demand区的时候，开单的条件是出现ping bar 或者 用小周期k线看是否出现msb。（出现单一价格行为，没有足够的经验，谨慎开单。）</p>
+<p>土神的回测<br>
+<img src="https://cole123466.github.io/post-images/1684230915435.png" alt="" loading="lazy"></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[服务器搭建网站（小白版本）]]></title>
+        <id>https://cole123466.github.io/post/fu-wu-qi-da-jian-wang-zhan-xiao-bai-ban-ben/</id>
+        <link href="https://cole123466.github.io/post/fu-wu-qi-da-jian-wang-zhan-xiao-bai-ban-ben/">
+        </link>
+        <updated>2022-12-27T07:35:22.000Z</updated>
+        <content type="html"><![CDATA[<h6 id="准备工具">准备工具：</h6>
+<h6 id="phpstudy服务器环境">phpstudy（服务器环境）</h6>
+<h6 id="小皮面板看端口">小皮面板（看端口）</h6>
+<h6 id="花生壳内网穿透">花生壳（内网穿透）</h6>
+<h6 id="腾讯云服务器给端口添加规则">腾讯云服务器（给端口添加规则）</h6>
+<h6 id="向日葵控制端用来传输文件或远程控制">向日葵控制端（用来传输文件或远程控制）</h6>
+<p>phpstudy相关设置：<img src="https://cole123466.github.io/post-images/1672126653771.png" alt="" loading="lazy"></p>
+<p>花生壳设置：<img src="https://cole123466.github.io/post-images/1672126661184.png" alt="" loading="lazy"></p>
+<p>因为php里我们都是默认localhost为域名 端口为80的</p>
+<p>所以不需要另外设置</p>
+<p>然后把网页文件全都放在根目录，不用新建目录再放网站文件，那样域名在外部访问的时候是跳转不了的（注！</p>
+<p>腾讯云设置：<img src="https://cole123466.github.io/post-images/1672126668331.png" alt="" loading="lazy"></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[微信小程序云开发大坑（指自己坑自己]]></title>
+        <id>https://cole123466.github.io/post/wei-xin-xiao-cheng-xu-qing-qiu-shu-ju-ku-da-keng/</id>
+        <link href="https://cole123466.github.io/post/wei-xin-xiao-cheng-xu-qing-qiu-shu-ju-ku-da-keng/">
+        </link>
+        <updated>2022-11-24T09:08:44.000Z</updated>
+        <content type="html"><![CDATA[<p>微信云开发初始化，要填envid，我是不知道之前是拿老师的项目还是咋的，直接开写，根本没想到初始化。真特么被坑到了，感觉智商受到了侮辱，直呼大骂微信开发者sb。<img src="https://cole123466.github.io/post-images/1669281112241.png" alt="" loading="lazy"><br>
+🙏不知道是被自己坑到还是老师甚至微信开发 - - 浪费老子时间精力，脑壳昏昏的。深受打击。</p>
+<h2 id="还是那句老行话不懂看文档不理解请熟读文档不记得请熟读并背诵文档">还是那句老行话，不懂看文档，不理解请熟读文档，不记得请熟读并背诵文档👼</h2>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[github page + gridea搭建个人博客]]></title>
+        <id>https://cole123466.github.io/post/github-page-gridea-da-jian-ge-ren-bo-ke/</id>
+        <link href="https://cole123466.github.io/post/github-page-gridea-da-jian-ge-ren-bo-ke/">
+        </link>
+        <updated>2022-11-20T15:54:06.000Z</updated>
+        <content type="html"><![CDATA[<h3 id="github-page-gridea搭建个人博客">github page + gridea搭建个人博客</h3>
+<hr>
+<p><img src="https://cole123466.github.io/post-images/1668959668202.png" alt="" loading="lazy"><br>
+在github创建以用户名命名的仓库</p>
+<p>个人资料=》settings=》 Developer settings=》Personal access tokens=》Token（classic）=》Generate new token</p>
+<p><img src="https://cole123466.github.io/post-images/1668959673812.png" alt="" loading="lazy"><br>
+然后是gridea的配置</p>
+<p><img src="https://cole123466.github.io/post-images/1668959676665.png" alt="" loading="lazy"><br>
+最后同步即可。</p>
+<p>总结：主要是gridea同步的问题，其他问题不大。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Vue碎片化学习]]></title>
+        <id>https://cole123466.github.io/post/vue-sui-pian-hua-xue-xi/</id>
+        <link href="https://cole123466.github.io/post/vue-sui-pian-hua-xue-xi/">
+        </link>
+        <updated>2022-11-17T13:15:49.000Z</updated>
+        <content type="html"><![CDATA[<p>Vue Study</p>
+<p>computed 会对数据的结构和数值进行改变</p>
+<p><a href="https://www.zhihu.com/question/61064119">v-for中key的作用</a></p>
+<p><a href="https://blog.csdn.net/weixin_39119072/article/details/99619211">sort的comp函数</a></p>
+<p><a href="https://blog.csdn.net/qq_38970408/article/details/121018660">箭头函数</a></p>
+<p>const</p>
+<p><a href="https://blog.csdn.net/qq_43363884/article/details/105582631">fliter</a></p>
+<p><a href="https://blog.csdn.net/qq_38970408/article/details/121018660">indexOf</a><br>
+可返回某个指定的字符串值在字符串中首次出现的位置</p>
+<p>vue的this</p>
+<p><a href="https://blog.csdn.net/YFirst_/article/details/106204366">vue中data函数中return的理解</a></p>
+<h6 id="2021-12-26笔记">2021-12-26笔记</h6>
+<p>生命周期<br>
+mounted函数：只要是回调函数都写成箭头函数<br>
+内存泄漏概念</p>
+<h6 id="2022-1-17">2022-1-17</h6>
+<p>组件：html,css,js等集合的资源<br>
+vue项目的建立和eslint的编写<br>
+props的使用（2）<br>
+总结：做项目先不用太在意布局，以实现功能为主</p>
+<h6 id="1-18-页面数据的交互添加和删除">1-18 页面数据的交互添加和删除</h6>
+<p>const {xxx} = this(?)<br>
+https://www.cnblogs.com/isme-zjh/p/13474520.html<br>
+reduce函数的使用<br>
+computed的set 和get的复习<br>
+ref的使用</p>
+<h6 id="1-21">1-21</h6>
+<p>组件间通讯（<br>
+①props:传参或传数据<br>
+②自定义事件： 绑定事件；触发事件（适用于父子间组件）<br>
+pubsub:订阅消息；发布消息（适用于同级组件父子孙等组件）<br>
+③传递数据标签slot<br>
+④vuex）</p>
+<h6 id="1-22">1-22</h6>
+<p>map方法对数据的处理<br>
+其中xx=&gt;({})的用法印象深刻<br>
+https://segmentfault.com/q/1010000012803139<br>
+建议有时间补一下黑马的js高级或者看一下</p>
+<h6 id="2-12">2-12</h6>
+<p>get 回调函数，根据其他相关的属性动态计算得到当前属性值<br>
+set 回调函数，监视当前属性值的变化，更新其它相关的属性值</p>
+<h6 id="2-21">2-21</h6>
+<p>源码阅读：一般指令<br>
+三元表达式连接字符串时加括号与否和操作符优先级有关</p>
+<p>伪数组的概念<br>
+https://www.jianshu.com/p/d48b6b9af131</p>
+<h6 id="4-10">4-10</h6>
+<p>数据劫持-&gt;数据绑定</p>
+<h6 id="4-11">4-11</h6>
+<p>vue源码watch.js<br>
+一个函数function x（a,b,c）<br>
+可以创建实例的方法输入参数<br>
+new x(a,b,c)<br>
+-&gt;function x(a,b,c)<br>
+this.a = a<br>
+this.b = b<br>
+this.c =c</p>
+<p><code>回调函数</code>关注两个点<br>
+1回调什么时候调用<br>
+2用来做什么</p>
+<p><code>dep和watcher</code><br>
+结合mvvm原理图<br>
+我的理解<br>
+dep对应的模板容器 如大括号表达式、一般指令（v-text v-html等<br>
+watcher对应的属性值（要监视属性值的变化（遍历的方式</p>
+<p>实际：</p>
+<p>dep 与data中的属性一一对应<br>
+watcher 为表达式创建对应的watcher 指定更新的函数<br>
+1个dep可以对应多个watcher</p>
+<blockquote>
+<p>Vuex在vue项目中的使用<br>
+https://blog.csdn.net/weixin_48653480/article/details/108695411</p>
+</blockquote>
+<blockquote>
+<p>vuex的结构图（手画<br>
+https://juejin.cn/post/6928468842377117709</p>
+</blockquote>
+<p>大小写切换键 CTRL+shift+u</p>
+<p>计算属性也会成为组件对象的属性</p>
+<p>render配置</p>
+<p>遇到 can not read property xx的大概率是数据解析比获取数据快导致的</p>
+<p>可用v-if解决</p>
+]]></content>
+    </entry>
+</feed>

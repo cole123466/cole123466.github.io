@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>Vue碎片化学习 | Lan&#39;s Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://cole123466.github.io/favicon.ico?v=1739513922133">
+<link rel="stylesheet" href="https://cole123466.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="Vue Study
+computed 会对数据的结构和数值进行改变
+v-for中key的作用
+sort的comp函数
+箭头函数
+const
+fliter
+indexOf
+可返回某个指定的字符串值在字符串中首次出现的位置
+vue的this
+v..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://cole123466.github.io">
+        <img src="https://cole123466.github.io/images/avatar.png?v=1739513922133" class="site-logo">
+        <h1 class="site-title">Lan&#39;s Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="https://cole123466.github.io/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="https://cole123466.github.io/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      Lan's Blog
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/cole123466" target="_blank">Lan</a> | <a class="rss" href="https://cole123466.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">Vue碎片化学习</h2>
+            <div class="post-date">2022-11-17</div>
+            
+            <div class="post-content" v-pre>
+              <p>Vue Study</p>
+<p>computed 会对数据的结构和数值进行改变</p>
+<p><a href="https://www.zhihu.com/question/61064119">v-for中key的作用</a></p>
+<p><a href="https://blog.csdn.net/weixin_39119072/article/details/99619211">sort的comp函数</a></p>
+<p><a href="https://blog.csdn.net/qq_38970408/article/details/121018660">箭头函数</a></p>
+<p>const</p>
+<p><a href="https://blog.csdn.net/qq_43363884/article/details/105582631">fliter</a></p>
+<p><a href="https://blog.csdn.net/qq_38970408/article/details/121018660">indexOf</a><br>
+可返回某个指定的字符串值在字符串中首次出现的位置</p>
+<p>vue的this</p>
+<p><a href="https://blog.csdn.net/YFirst_/article/details/106204366">vue中data函数中return的理解</a></p>
+<h6 id="2021-12-26笔记">2021-12-26笔记</h6>
+<p>生命周期<br>
+mounted函数：只要是回调函数都写成箭头函数<br>
+内存泄漏概念</p>
+<h6 id="2022-1-17">2022-1-17</h6>
+<p>组件：html,css,js等集合的资源<br>
+vue项目的建立和eslint的编写<br>
+props的使用（2）<br>
+总结：做项目先不用太在意布局，以实现功能为主</p>
+<h6 id="1-18-页面数据的交互添加和删除">1-18 页面数据的交互添加和删除</h6>
+<p>const {xxx} = this(?)<br>
+https://www.cnblogs.com/isme-zjh/p/13474520.html<br>
+reduce函数的使用<br>
+computed的set 和get的复习<br>
+ref的使用</p>
+<h6 id="1-21">1-21</h6>
+<p>组件间通讯（<br>
+①props:传参或传数据<br>
+②自定义事件： 绑定事件；触发事件（适用于父子间组件）<br>
+pubsub:订阅消息；发布消息（适用于同级组件父子孙等组件）<br>
+③传递数据标签slot<br>
+④vuex）</p>
+<h6 id="1-22">1-22</h6>
+<p>map方法对数据的处理<br>
+其中xx=&gt;({})的用法印象深刻<br>
+https://segmentfault.com/q/1010000012803139<br>
+建议有时间补一下黑马的js高级或者看一下</p>
+<h6 id="2-12">2-12</h6>
+<p>get 回调函数，根据其他相关的属性动态计算得到当前属性值<br>
+set 回调函数，监视当前属性值的变化，更新其它相关的属性值</p>
+<h6 id="2-21">2-21</h6>
+<p>源码阅读：一般指令<br>
+三元表达式连接字符串时加括号与否和操作符优先级有关</p>
+<p>伪数组的概念<br>
+https://www.jianshu.com/p/d48b6b9af131</p>
+<h6 id="4-10">4-10</h6>
+<p>数据劫持-&gt;数据绑定</p>
+<h6 id="4-11">4-11</h6>
+<p>vue源码watch.js<br>
+一个函数function x（a,b,c）<br>
+可以创建实例的方法输入参数<br>
+new x(a,b,c)<br>
+-&gt;function x(a,b,c)<br>
+this.a = a<br>
+this.b = b<br>
+this.c =c</p>
+<p><code>回调函数</code>关注两个点<br>
+1回调什么时候调用<br>
+2用来做什么</p>
+<p><code>dep和watcher</code><br>
+结合mvvm原理图<br>
+我的理解<br>
+dep对应的模板容器 如大括号表达式、一般指令（v-text v-html等<br>
+watcher对应的属性值（要监视属性值的变化（遍历的方式</p>
+<p>实际：</p>
+<p>dep 与data中的属性一一对应<br>
+watcher 为表达式创建对应的watcher 指定更新的函数<br>
+1个dep可以对应多个watcher</p>
+<blockquote>
+<p>Vuex在vue项目中的使用<br>
+https://blog.csdn.net/weixin_48653480/article/details/108695411</p>
+</blockquote>
+<blockquote>
+<p>vuex的结构图（手画<br>
+https://juejin.cn/post/6928468842377117709</p>
+</blockquote>
+<p>大小写切换键 CTRL+shift+u</p>
+<p>计算属性也会成为组件对象的属性</p>
+<p>render配置</p>
+<p>遇到 can not read property xx的大概率是数据解析比获取数据快导致的</p>
+<p>可用v-if解决</p>
+
+            </div>
+            
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>

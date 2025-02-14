@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>服务器搭建网站（小白版本） | Lan&#39;s Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://cole123466.github.io/favicon.ico?v=1739513922133">
+<link rel="stylesheet" href="https://cole123466.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="准备工具：
+phpstudy（服务器环境）
+小皮面板（看端口）
+花生壳（内网穿透）
+腾讯云服务器（给端口添加规则）
+向日葵控制端（用来传输文件或远程控制）
+phpstudy相关设置：
+花生壳设置：
+因为php里我们都是默认localhost..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://cole123466.github.io">
+        <img src="https://cole123466.github.io/images/avatar.png?v=1739513922133" class="site-logo">
+        <h1 class="site-title">Lan&#39;s Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="https://cole123466.github.io/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="https://cole123466.github.io/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      Lan's Blog
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/cole123466" target="_blank">Lan</a> | <a class="rss" href="https://cole123466.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">服务器搭建网站（小白版本）</h2>
+            <div class="post-date">2022-12-27</div>
+            
+            <div class="post-content" v-pre>
+              <h6 id="准备工具">准备工具：</h6>
+<h6 id="phpstudy服务器环境">phpstudy（服务器环境）</h6>
+<h6 id="小皮面板看端口">小皮面板（看端口）</h6>
+<h6 id="花生壳内网穿透">花生壳（内网穿透）</h6>
+<h6 id="腾讯云服务器给端口添加规则">腾讯云服务器（给端口添加规则）</h6>
+<h6 id="向日葵控制端用来传输文件或远程控制">向日葵控制端（用来传输文件或远程控制）</h6>
+<p>phpstudy相关设置：<img src="https://cole123466.github.io/post-images/1672126653771.png" alt="" loading="lazy"></p>
+<p>花生壳设置：<img src="https://cole123466.github.io/post-images/1672126661184.png" alt="" loading="lazy"></p>
+<p>因为php里我们都是默认localhost为域名 端口为80的</p>
+<p>所以不需要另外设置</p>
+<p>然后把网页文件全都放在根目录，不用新建目录再放网站文件，那样域名在外部访问的时候是跳转不了的（注！</p>
+<p>腾讯云设置：<img src="https://cole123466.github.io/post-images/1672126668331.png" alt="" loading="lazy"></p>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://cole123466.github.io/post/wei-xin-xiao-cheng-xu-qing-qiu-shu-ju-ku-da-keng/">
+                  <h3 class="post-title">
+                    微信小程序云开发大坑（指自己坑自己
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>

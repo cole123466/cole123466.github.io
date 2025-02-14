@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>跟单提示脚本 | Lan&#39;s Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://cole123466.github.io/favicon.ico?v=1739513922133">
+<link rel="stylesheet" href="https://cole123466.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="豆包提问
+#python #编程
+https://www.doubao.com/thread/wc24fc05a57442cca
+用crontab每5秒运行脚本
+记得给权限chmod +x /root/bot/gendan.py
+bug:保..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://cole123466.github.io">
+        <img src="https://cole123466.github.io/images/avatar.png?v=1739513922133" class="site-logo">
+        <h1 class="site-title">Lan&#39;s Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="https://cole123466.github.io/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="https://cole123466.github.io/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      Lan's Blog
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/cole123466" target="_blank">Lan</a> | <a class="rss" href="https://cole123466.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">跟单提示脚本</h2>
+            <div class="post-date">2025-02-07</div>
+            
+            <div class="post-content" v-pre>
+              <p>豆包提问<br>
+#python #编程</p>
+<p>https://www.doubao.com/thread/wc24fc05a57442cca<br>
+用crontab每5秒运行脚本<br>
+记得给权限chmod +x /root/bot/gendan.py<br>
+bug:保证金计算那里每次数据不一致，就会导致数据即使没有发生变化，也会运行发生变化的代码<br>
+主要是ip的问题，新加坡能请求一些币安的接口，但是有的接口要香港</p>
+<p>开仓提醒：</p>
+<pre><code class="language-python">import requests
+import json
+import os
+import time
+
+webhook_url = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=f02937f9-f887-4a24-9609-1f0ca686d40c'
+url = &quot;https://www.binance.info/bapi/futures/v1/friendly/future/copy-trade/lead-data/positions?portfolioId=3976272489709966337&quot;
+MAX_RETRIES = 3  # 最大重试次数
+RETRY_DELAY = 5  # 重试间隔时间（秒）
+
+def make_request(url):
+
+    带有重试机制的网络请求函数
+    
+    retries = 0
+    while retries &lt; MAX_RETRIES:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f'网络请求出错，第 {retries + 1} 次重试: {e}')
+            retries += 1
+            time.sleep(RETRY_DELAY)
+    print('达到最大重试次数，请求失败。')
+    return None
+
+def main():
+    try:
+        # 发送请求获取数据
+        data = make_request(url)
+        if data is None:
+            return
+
+        # 筛选出 adl 不为 0 的持仓信息
+        filtered = [pos for pos in data['data'] if pos.get('adl', 0) != 0]
+
+        def generate_json():
+
+            result = [
+                {
+
+                    'symbol': item['symbol'],
+                    'entryPrice': str(float(item['entryPrice'])),  # 确保为浮点数并转换为字符串
+                    'positionSide': '多' if item['positionSide'].upper() == 'LONG' else '空',
+                    'leverage': float(item['leverage']),  # 确保为浮点数
+                }
+                for item in filtered if item['adl'] != 0
+            ]
+            with open('output.json', 'w', encoding='utf-8') as f:
+                json.dump(result, f, ensure_ascii=False, indent=4)
+            return result
+
+        def compare_json(prev_data, new_data):
+            if prev_data == new_data:
+                print(&quot;JSON 文件内容未发生变化。&quot;)
+            else:
+                print(&quot;JSON 文件内容发生了变化。&quot;)
+                # 找出新增的数据
+                new_items = [item for item in new_data if item not in prev_data]
+                for item in new_items:
+                    output_str = f&quot;haywar开单了！\n交易对：{item['symbol']}\n入场价位：{item['entryPrice']}\n方向：{item['positionSide']}\n杠杆：{item['leverage']}\n&quot;
+                    print(&quot;-&quot; * 30)
+                    print(output_str)
+                    print(&quot;-&quot; * 30)
+                    msg = {
+                        &quot;msgtype&quot;: &quot;text&quot;,
+                        &quot;text&quot;: {
+                            &quot;content&quot;: output_str
+                        }
+                    }
+                    # 将数据序列化为 JSON 格式
+                    headers = {'Content-Type': 'application/json'}
+                    try:
+                        response = requests.post(webhook_url, data=json.dumps(msg), headers=headers)
+                        response.raise_for_status()  # 检查请求是否成功
+                        print('Webhook 发送成功:', response.text)
+                    except requests.RequestException as e:
+                        print('Webhook 发送失败:', e)
+
+        # 读取之前的 JSON 文件
+        if os.path.exists('output.json'):
+            with open('output.json', 'r', encoding='utf-8') as f:
+                prev_result = json.load(f)
+        else:
+            prev_result = []
+
+        new_result = generate_json()
+        compare_json(prev_result, new_result)
+
+    except (KeyError, json.JSONDecodeError) as e:
+        print('数据解析出错:', e)
+    except FileNotFoundError:
+        print('文件未找到，请检查路径。')
+    except Exception as e:
+        print('发生未知错误:', e)
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<p>平仓提醒：</p>
+<pre><code class="language-python">import requests
+import json
+from datetime import datetime
+webhook_url = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=f02937f9-f887-4a24-9609-1f0ca686d40c'
+
+
+def fetch_and_save_positions():
+    url = &quot;https://www.binance.com/bapi/futures/v1/friendly/future/copy-trade/lead-portfolio/position-history&quot;
+    payload = {
+        &quot;portfolioId&quot;: &quot;3976272489709966337&quot;,
+        &quot;pageNumber&quot;: 1,
+        &quot;pageSize&quot;: 10,
+        &quot;sort&quot;: &quot;CLOSING&quot;,
+    }
+
+    # 定义请求头
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+    try:
+        try:
+            with open('positions_history.json', 'r', encoding='utf-8') as f:
+                old_data = json.load(f)
+        except FileNotFoundError:
+            old_data = []
+
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()  # 检查 HTTP 状态码
+
+        # 打印响应内容
+        # print(&quot;响应内容:&quot;, response.text)
+
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            print(&quot;无法将响应内容解析为 JSON 格式。响应内容:&quot;, response.text)
+            return
+
+        positions_list = data.get('data', {}).get('list', [])
+        new_filtered_data = []
+        for item in positions_list:
+            update_time = item.get(&quot;updateTime&quot;)
+            if update_time:
+                update_time = datetime.fromtimestamp(update_time / 1000).strftime(&quot;%Y-%m-%d %H:%M:%S&quot;)
+            else:
+                update_time = &quot;N/A&quot;
+
+            new_filtered_data.append({
+                &quot;symbol&quot;: item.get(&quot;symbol&quot;),
+                &quot;side&quot;: item.get(&quot;side&quot;),
+                &quot;avgClosePrice&quot;: item.get(&quot;avgClosePrice&quot;),
+                &quot;closingPnl&quot;: item.get(&quot;closingPnl&quot;),
+                &quot;updateTime&quot;: update_time
+            })
+
+        new_positions = []
+        for position in new_filtered_data:
+            if position not in old_data:
+                new_positions.append(position)
+
+        output_str = &quot;&quot;
+        if new_positions:
+            for position in new_positions:
+                position_str = (
+                    f&quot;haywar平仓！\n&quot;
+                    f&quot;交易对：{position['symbol']}\n&quot;
+                    f&quot;方向：{position['side']}\n&quot;
+                    f&quot;平仓价位：{position['avgClosePrice']}\n&quot;
+                    f&quot;平仓盈亏：{position['closingPnl']}\n&quot;
+                    f&quot;平仓时间：{position['updateTime']}\n\n&quot;
+                )
+                output_str += position_str
+                msg = {
+                    &quot;msgtype&quot;: &quot;text&quot;,
+                    &quot;text&quot;: {
+                        &quot;content&quot;: output_str
+                    }
+                }
+                # 将数据序列化为 JSON 格式
+                headers = {'Content-Type': 'application/json'}
+                try:
+                    response = requests.post(webhook_url, data=json.dumps(msg), headers=headers)
+                    response.raise_for_status()  # 检查请求是否成功
+                    print('Webhook 发送成功:', response.text)
+                except requests.RequestException as e:
+                    print('Webhook 发送失败:', e)
+
+        with open('positions_history.json', 'w', encoding='utf-8') as f:
+            json.dump(new_filtered_data, f, ensure_ascii=False, indent=4)
+        print(&quot;数据已成功保存到 positions_history.json&quot;)
+
+    except requests.exceptions.RequestException as e:
+        print(f&quot;请求失败: {str(e)}&quot;)
+    except Exception as e:
+        print(f&quot;操作失败: {str(e)}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    fetch_and_save_positions()
+</code></pre>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://cole123466.github.io/post/a4-dao-a7ge-ren-xin-de-jing-yan-jian-shu-b-zhan/">
+                  <h3 class="post-title">
+                    a4到a7，个人心得经验简述（b站）
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>
